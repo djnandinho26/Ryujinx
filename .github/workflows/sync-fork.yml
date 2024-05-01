@@ -1,16 +1,36 @@
 name: sync-fork
+
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch: { }
+    - cron: '0 0 * * *' # Executa todos os dias à meia-noite UTC
+  workflow_dispatch: # Permite acionamento manual
+
 jobs:
+
   sync:
     runs-on: ubuntu-latest
+    
     permissions:
-      contents: write
+      contents: write # Permissão de gravação no repositório
+      
     steps:
-      - run: gh repo sync $REPOSITORY -b $BRANCH_NAME
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          BRANCH_NAME: ${{ github.ref_name }}
+
+    - name: Checkout repository # Obtém o código do repositório
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # Obtém todo o histórico do repositório
+
+    - name: Configure Git # Configura credenciais Git
+      run: |
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "GitHub Actions"
+
+    - name: Sync fork # Sincroniza o fork com o repositório upstream
+      run: |
+        git remote add upstream https://github.com/${{ github.repository_owner }}/upstream-repo.git # Adiciona repositório upstream
+        git fetch upstream # Obtém commits do upstream
+        git checkout main # Alterna para o branch principal
+        git merge upstream/main # Faz o merge dos commits do upstream
+        git push origin main # Envia as alterações para o fork
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token de acesso ao GitHub
